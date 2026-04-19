@@ -1,4 +1,5 @@
 # Hadoop output
+hadoop_outputs/
 output/
 output/*
 /output/
@@ -15,3 +16,4 @@ project-data/*.csv
 
 # Hadoop temp
 *.log
+
