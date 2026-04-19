@@ -1,3 +1,4 @@
+
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 from flask_cors import CORS
@@ -15,6 +16,9 @@ collection = db["crop_data"]
 # ---------------- LOAD ML MODEL ----------------
 model = joblib.load("yield_model.pkl")
 model_columns = joblib.load("model_columns.pkl")
+
+# Extract all crops from model columns
+all_crops = [col.replace("crop_", "") for col in model_columns if col.startswith("crop_")]
 
 # ---------------- BASIC APIs ----------------
 
@@ -94,6 +98,20 @@ def top_crops():
 
     return jsonify(result)
 
+# ---------------- HELPER FUNCTION ----------------
+
+def generate_insight(temp, humidity, wind):
+    if 20 <= temp <= 30 and 50 <= humidity <= 70:
+        return "High yield expected due to favorable temperature and humidity"
+    elif temp > 35:
+        return "Yield may decrease due to high temperature"
+    elif humidity < 30:
+        return "Low humidity may negatively affect yield"
+    elif wind > 15:
+        return "High wind speed may impact crop stability"
+    else:
+        return "Moderate conditions, average yield expected"
+
 # ---------------- ML PREDICTION API ----------------
 
 @app.route("/predict", methods=["POST"])
@@ -101,7 +119,6 @@ def predict():
     try:
         data = request.json
 
-        # Create input dict
         input_dict = {
             "year": int(data["year"]),
             "temperature": float(data["temperature"]),
@@ -110,30 +127,78 @@ def predict():
             "pressure": float(data["pressure"])
         }
 
-        # Handle crop encoding
         crop_name = data["crop"]
 
-        # Create DataFrame
         input_df = pd.DataFrame([input_dict])
 
-        # Add crop columns (one-hot)
         for col in model_columns:
             if col.startswith("crop_"):
                 input_df[col] = 1 if col == f"crop_{crop_name}" else 0
 
-        # Add missing columns
         for col in model_columns:
             if col not in input_df.columns:
                 input_df[col] = 0
 
-        # Ensure correct order
         input_df = input_df[model_columns]
 
-        # Predict
         prediction = model.predict(input_df)[0]
 
+        insight = generate_insight(
+            input_dict["temperature"],
+            input_dict["humidity"],
+            input_dict["wind_speed"]
+        )
+
         return jsonify({
-            "predicted_yield": round(float(prediction), 4)
+            "predicted_yield": round(float(prediction), 4),
+            "insight": insight
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+# ---------------- RECOMMENDATION API ----------------
+
+@app.route("/recommend", methods=["POST"])
+def recommend():
+    try:
+        data = request.json
+
+        input_base = {
+            "year": int(data["year"]),
+            "temperature": float(data["temperature"]),
+            "humidity": float(data["humidity"]),
+            "wind_speed": float(data["wind_speed"]),
+            "pressure": float(data["pressure"])
+        }
+
+        results = []
+
+        for crop in all_crops:
+            input_df = pd.DataFrame([input_base])
+
+            for col in model_columns:
+                if col.startswith("crop_"):
+                    input_df[col] = 1 if col == f"crop_{crop}" else 0
+
+            for col in model_columns:
+                if col not in input_df.columns:
+                    input_df[col] = 0
+
+            input_df = input_df[model_columns]
+
+            pred = model.predict(input_df)[0]
+
+            results.append({
+                "crop": crop,
+                "predicted_yield": round(float(pred), 4)
+            })
+
+        # Sort descending
+        results = sorted(results, key=lambda x: x["predicted_yield"], reverse=True)
+
+        return jsonify({
+            "top_recommendations": results[:5]
         })
 
     except Exception as e:
