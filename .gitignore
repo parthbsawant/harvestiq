@@ -1,0 +1,17 @@
+# Hadoop output
+output/
+output/*
+/output/
+
+# System files
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Large datasets (optional)
+project-data/*.csv
+
+# Hadoop temp
+*.log
