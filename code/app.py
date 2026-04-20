@@ -6,7 +6,8 @@ import joblib
 import pandas as pd
 
 app = Flask(__name__)
-CORS(app)
+# CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # MongoDB connection
 client = MongoClient("mongodb://localhost:27017/")
