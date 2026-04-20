@@ -30,21 +30,24 @@ const Recommend = () => {
 
     try {
       const payload = {
-        Year: parseInt(formData.year),
-        Temperature: parseFloat(formData.temperature),
-        Humidity: parseFloat(formData.humidity),
-        Wind_Speed: parseFloat(formData.windSpeed),
-        Pressure: parseFloat(formData.pressure),
+        year: parseInt(formData.year),
+        temperature: parseFloat(formData.temperature),
+        humidity: parseFloat(formData.humidity),
+        wind_speed: parseFloat(formData.windSpeed),
+        pressure: parseFloat(formData.pressure),
       };
 
       const res = await recommendCrops(payload);
+      console.log("API Response:", res.data);
       
       // Expected structure from backend or adapt to it
       // Default mock if structure varies
-      const recs = res.data.recommendations || res.data || [
-        { crop: "Rice", yield: "2.8" },
-        { crop: "Maize", yield: "3.1" }
-      ];
+      // const recs = res.data.recommendations || res.data || [
+      //   { crop: "Rice", yield: "2.8" },
+      //   { crop: "Maize", yield: "3.1" }
+      // ];
+
+      const recs = res.data.recommended_crops || [];
 
       setRecommendations(recs);
     } catch (err) {

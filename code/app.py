@@ -174,50 +174,101 @@ def predict():
 
 # ---------------- RECOMMENDATION API ----------------
 
+# @app.route("/recommend", methods=["POST"])
+# def recommend():
+#     try:
+#         data = request.json
+
+#         input_base = {
+#             "year": int(data["year"]),
+#             "temperature": float(data["temperature"]),
+#             "humidity": float(data["humidity"]),
+#             "wind_speed": float(data["wind_speed"]),
+#             "pressure": float(data["pressure"])
+#         }
+
+#         results = []
+
+#         for crop in all_crops:
+#             input_df = pd.DataFrame([input_base])
+
+#             for col in model_columns:
+#                 if col.startswith("crop_"):
+#                     input_df[col] = 1 if col == f"crop_{crop}" else 0
+
+#             for col in model_columns:
+#                 if col not in input_df.columns:
+#                     input_df[col] = 0
+
+#             input_df = input_df[model_columns]
+
+#             pred = model.predict(input_df)[0]
+
+#             results.append({
+#                 "crop": crop,
+#                 "predicted_yield": round(float(pred), 4)
+#             })
+
+#         # Sort descending
+#         results = sorted(results, key=lambda x: x["predicted_yield"], reverse=True)
+
+#         return jsonify({
+#             "top_recommendations": results[:5]
+#         })
+
+#     except Exception as e:
+#         return jsonify({"error": str(e)})
+
+
 @app.route("/recommend", methods=["POST"])
 def recommend():
-    try:
-        data = request.json
+    data = request.json
 
-        input_base = {
-            "year": int(data["year"]),
-            "temperature": float(data["temperature"]),
-            "humidity": float(data["humidity"]),
-            "wind_speed": float(data["wind_speed"]),
-            "pressure": float(data["pressure"])
-        }
+    temp = float(data.get("temperature"))
+    humidity = float(data.get("humidity"))
+    wind = float(data.get("wind_speed"))
+    pressure = float(data.get("pressure"))
 
-        results = []
+    # 🔹 1. Range-based filtering (tolerances tuned for your dataset)
+    query = {
+        "temperature": {"$gte": temp - 2, "$lte": temp + 2},
+        "humidity": {"$gte": humidity - 5, "$lte": humidity + 5},
+        "wind_speed": {"$gte": wind - 2, "$lte": wind + 2},
+        "pressure": {"$gte": pressure - 5, "$lte": pressure + 5},
+    }
 
-        for crop in all_crops:
-            input_df = pd.DataFrame([input_base])
+    records = list(collection.find(query, {"_id": 0}))
 
-            for col in model_columns:
-                if col.startswith("crop_"):
-                    input_df[col] = 1 if col == f"crop_{crop}" else 0
+    # 🔹 2. Fallback if no records found (important for demo reliability)
+    if not records:
+        records = list(collection.find({}, {"_id": 0}))
 
-            for col in model_columns:
-                if col not in input_df.columns:
-                    input_df[col] = 0
+    # 🔹 3. Aggregate by crop (average yield)
+    crop_stats = {}
+    for r in records:
+        crop = r["crop"]
+        crop_stats.setdefault(crop, []).append(r["yield"])
 
-            input_df = input_df[model_columns]
-
-            pred = model.predict(input_df)[0]
-
-            results.append({
-                "crop": crop,
-                "predicted_yield": round(float(pred), 4)
-            })
-
-        # Sort descending
-        results = sorted(results, key=lambda x: x["predicted_yield"], reverse=True)
-
-        return jsonify({
-            "top_recommendations": results[:5]
+    aggregated = []
+    for crop, yields in crop_stats.items():
+        avg_yield = sum(yields) / len(yields)
+        aggregated.append({
+            "crop": crop,
+            "avg_yield": avg_yield
         })
 
-    except Exception as e:
-        return jsonify({"error": str(e)})
+    # 🔹 4. Sort by best yield
+    aggregated.sort(key=lambda x: x["avg_yield"], reverse=True)
+
+    # 🔹 5. Return top 5
+    top5 = [
+        {"crop": item["crop"], "yield": round(item["avg_yield"], 4)}
+        for item in aggregated[:5]
+    ]
+
+    return jsonify({
+        "recommended_crops": top5
+    })
 
 # ALWAYS KEEP THIS LAST
 if __name__ == "__main__":
