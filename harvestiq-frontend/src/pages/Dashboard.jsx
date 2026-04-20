@@ -30,7 +30,7 @@ const Dashboard = () => {
       const [dataRes, avgYieldRes, trendRes, topCropsRes] = await Promise.all([
         getData().catch(() => ({ data: [] })),
         getAvgYield().catch(() => ({ data: [] })),
-        getTrend().catch(() => ({ data: [] })),
+        getTrend(filters).catch(() => ({ data: [] })),
         getTopCrops().catch(() => ({ data: [] }))
       ]);
 
@@ -68,6 +68,9 @@ const Dashboard = () => {
       } else {
         res = await getFilteredData(activeFilters);
       }
+    
+    const trendRes = await getTrend(activeFilters);
+    setTrendData(Array.isArray(trendRes.data) ? trendRes.data : []);
 
       setTableData(Array.isArray(res.data) ? res.data : []);
     } catch (err) {

@@ -76,7 +76,21 @@ def avg_yield_per_crop():
 
 @app.route("/yield_trend", methods=["GET"])
 def yield_trend():
+    year = request.args.get("year")
+    state = request.args.get("state")
+    crop = request.args.get("crop")
+
+    query = {}
+
+    if year:
+        query["year"] = int(year)
+    if state:
+        query["state"] = state
+    if crop:
+        query["crop"] = crop
+
     pipeline = [
+        {"$match": query},
         {"$group": {"_id": "$year", "avg_yield": {"$avg": "$yield"}}},
         {"$sort": {"_id": 1}}
     ]
