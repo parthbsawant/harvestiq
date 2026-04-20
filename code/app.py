@@ -6,8 +6,8 @@ import joblib
 import pandas as pd
 
 app = Flask(__name__)
-# CORS(app)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app)
+
 
 # MongoDB connection
 client = MongoClient("mongodb://localhost:27017/")
@@ -29,7 +29,8 @@ def home():
 
 @app.route("/data", methods=["GET"])
 def get_data():
-    data = list(collection.find({}, {"_id": 0}).limit(100))
+    # data = list(collection.find({}, {"_id": 0}).limit(100))
+    data = list(collection.find({}, {"_id": 0}))
     return jsonify(data)
 
 @app.route("/filter", methods=["GET"])
@@ -47,7 +48,8 @@ def filter_data():
     if crop:
         query["crop"] = crop
 
-    data = list(collection.find(query, {"_id": 0}).limit(100))
+    # data = list(collection.find(query, {"_id": 0}).limit(100))
+    
     return jsonify(data)
 
 # ---------------- ANALYTICS APIs ----------------
@@ -62,11 +64,15 @@ def avg_yield_per_crop():
 
     result = list(collection.aggregate(pipeline))
 
-    for r in result:
-        r["crop"] = r["_id"]
-        del r["_id"]
+    formatted = [
+        {
+            "crop": r["_id"],
+            "yield": r["avg_yield"]
+        }
+        for r in result
+    ]
 
-    return jsonify(result)
+    return jsonify(formatted)
 
 @app.route("/yield_trend", methods=["GET"])
 def yield_trend():
@@ -77,11 +83,15 @@ def yield_trend():
 
     result = list(collection.aggregate(pipeline))
 
-    for r in result:
-        r["year"] = r["_id"]
-        del r["_id"]
+    formatted = [
+        {
+            "year": r["_id"],
+            "yield": r["avg_yield"]
+        }
+        for r in result
+    ]
 
-    return jsonify(result)
+    return jsonify(formatted)
 
 @app.route("/top_crops", methods=["GET"])
 def top_crops():
@@ -93,11 +103,15 @@ def top_crops():
 
     result = list(collection.aggregate(pipeline))
 
-    for r in result:
-        r["crop"] = r["_id"]
-        del r["_id"]
+    formatted = [
+        {
+            "crop": r["_id"],
+            "yield": r["avg_yield"]
+        }
+        for r in result
+    ]
 
-    return jsonify(result)
+    return jsonify(formatted)
 
 # ---------------- HELPER FUNCTION ----------------
 

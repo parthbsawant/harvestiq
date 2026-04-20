@@ -38,12 +38,12 @@ const Predict = () => {
     try {
       // Convert string values to numbers where appropriate
       const payload = {
-        Year: parseInt(formData.year),
-        Temperature: parseFloat(formData.temperature),
-        Humidity: parseFloat(formData.humidity),
-        Wind_Speed: parseFloat(formData.windSpeed),
-        Pressure: parseFloat(formData.pressure),
-        Crop: formData.crop
+        year: parseInt(formData.year),
+        temperature: parseFloat(formData.temperature),
+        humidity: parseFloat(formData.humidity),
+        wind_speed: parseFloat(formData.windSpeed),
+        pressure: parseFloat(formData.pressure),
+        crop: formData.crop
       };
 
       const res = await predictYield(payload);
